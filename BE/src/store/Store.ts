@@ -5,7 +5,7 @@ export interface Chat {
   userId: userId;
   name: string;
   message: string;
-  upvotes: userId[]; // who has upvoted what
+  upvotes: userId[];
 }
 
 export abstract class Store {
