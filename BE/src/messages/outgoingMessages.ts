@@ -3,11 +3,12 @@ export enum SupportedMessage {
   UpdateChat = "UPDATE_CHAT",
 }
 
-type MessagePaylod = {
+export type MessagePaylod = {
   roomId: string;
   message: string;
   name: string;
   upvotes: number;
+  chatId: string;
 };
 
 export type OutgoingMessage =

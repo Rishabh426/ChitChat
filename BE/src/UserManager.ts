@@ -51,6 +51,7 @@ export class UserManager {
       console.error("Room not found");
       return;
     }
+
     room.users.forEach(({ conn }) => {
       conn.sendUTF(JSON.stringify(message));
     });
