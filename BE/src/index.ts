@@ -1,28 +1,19 @@
+import express from "express";
 import { server as WebSocketServer, connection } from "websocket";
-import http from "http";
-import {
-  IncomingMessage,
-  InitMessageType,
-  SupportedMessage,
-} from "./messages/incomingMessages";
+import { IncomingMessage, SupportedMessage } from "./messages/incomingMessages";
 import {
   OutgoingMessage,
   SupportedMessage as OutgoingSupportedMessage,
 } from "./messages/outgoingMessages";
 import { UserManager } from "./UserManager";
 import { InMemoryStore } from "./store/InMemoryStore";
-import { Store } from "./store/Store";
 
-const server = http.createServer(function (request: any, response: any) {
-  console.log(new Date() + " Received request for " + request.url);
-  response.writeHead(404);
-  response.end();
-});
+const app = express();
 
 const userManager = new UserManager();
 const store = new InMemoryStore();
 
-server.listen(8080, function () {
+const server = app.listen(8080, () => {
   console.log(new Date() + " Server is listening on port 8080");
 });
 
@@ -46,8 +37,9 @@ wsServer.on("request", function (request) {
     return;
   }
 
-  var connection = request.accept(null, request.origin);
+  const connection = request.accept("echo-protocol", request.origin);
   console.log(new Date() + " Connection accepted.");
+
   connection.on("message", function (message) {
     console.log(message);
     if (message.type === "utf8") {
@@ -64,11 +56,13 @@ function messageHandler(ws: connection, message: IncomingMessage) {
     const payload = message.payload;
     userManager.addUser(payload.name, payload.userId, payload.roomId, ws);
   }
+
   if (message.type == SupportedMessage.SendMessage) {
     const payload = message.payload;
     const user = userManager.getUser(payload.roomId, payload.userId);
     console.log("Incoming message = ", message);
     console.log("first");
+
     if (!user) {
       console.log("user not found");
     } else {
@@ -82,26 +76,35 @@ function messageHandler(ws: connection, message: IncomingMessage) {
       if (!chat) {
         return;
       } else {
-        console.log("third");
-        const outgoingPayload: OutgoingMessage = {
-          type: OutgoingSupportedMessage.AddChat,
-          payload: {
-            chatId: chat.id,
-            roomId: payload.roomId,
-            message: payload.message,
-            name: user.name,
-            upvotes: 0,
-          },
-        };
-        console.log(outgoingPayload);
-        userManager.broadcast(payload.roomId, payload.userId, outgoingPayload);
+        try {
+          const outgoingPayload: OutgoingMessage = {
+            type: OutgoingSupportedMessage.AddChat,
+            payload: {
+              chatId: chat.id,
+              roomId: payload.roomId,
+              message: payload.message,
+              name: user.name,
+              upvotes: 0,
+            },
+          };
+          console.log("outoging payload = ", outgoingPayload);
+          ws.sendUTF(JSON.stringify(outgoingPayload));
+          userManager.broadcast(
+            payload.roomId,
+            payload.userId,
+            outgoingPayload,
+          );
+        } catch (e) {
+          console.log(e);
+        }
       }
     }
   }
+
   if (message.type == SupportedMessage.UpvoteMessage) {
     const payload = message.payload;
-
     const chat = store.upvote(payload.userId, payload.roomId, payload.chatId);
+
     if (!chat) {
       return;
     } else {

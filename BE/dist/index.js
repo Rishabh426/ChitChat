@@ -3,20 +3,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
 const websocket_1 = require("websocket");
-const http_1 = __importDefault(require("http"));
 const incomingMessages_1 = require("./messages/incomingMessages");
 const outgoingMessages_1 = require("./messages/outgoingMessages");
 const UserManager_1 = require("./UserManager");
-const InMemoryStore_1 = require("./InMemoryStore");
-const server = http_1.default.createServer(function (request, response) {
-    console.log(new Date() + " Received request for " + request.url);
-    response.writeHead(404);
-    response.end();
-});
+const InMemoryStore_1 = require("./store/InMemoryStore");
+const app = (0, express_1.default)();
 const userManager = new UserManager_1.UserManager();
 const store = new InMemoryStore_1.InMemoryStore();
-server.listen(8080, function () {
+const server = app.listen(8080, () => {
     console.log(new Date() + " Server is listening on port 8080");
 });
 const wsServer = new websocket_1.server({
@@ -33,7 +29,7 @@ wsServer.on("request", function (request) {
         console.log(new Date() + " Connection from origin " + request.origin + " rejected.");
         return;
     }
-    var connection = request.accept(null, request.origin);
+    const connection = request.accept("echo-protocol", request.origin);
     console.log(new Date() + " Connection accepted.");
     connection.on("message", function (message) {
         console.log(message);
@@ -66,19 +62,24 @@ function messageHandler(ws, message) {
                 return;
             }
             else {
-                console.log("third");
-                const outgoingPayload = {
-                    type: outgoingMessages_1.SupportedMessage.AddChat,
-                    payload: {
-                        chatId: chat.id,
-                        roomId: payload.roomId,
-                        message: payload.message,
-                        name: user.name,
-                        upvotes: 0,
-                    },
-                };
-                console.log(outgoingPayload);
-                userManager.broadcast(payload.roomId, payload.userId, outgoingPayload);
+                try {
+                    const outgoingPayload = {
+                        type: outgoingMessages_1.SupportedMessage.AddChat,
+                        payload: {
+                            chatId: chat.id,
+                            roomId: payload.roomId,
+                            message: payload.message,
+                            name: user.name,
+                            upvotes: 0,
+                        },
+                    };
+                    console.log("outoging payload = ", outgoingPayload);
+                    ws.sendUTF(JSON.stringify(outgoingPayload));
+                    userManager.broadcast(payload.roomId, payload.userId, outgoingPayload);
+                }
+                catch (e) {
+                    console.log(e);
+                }
             }
         }
     }
