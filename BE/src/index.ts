@@ -116,6 +116,10 @@ function messageHandler(ws: connection, message: IncomingMessage) {
           upvotes: chat.upvotes.length,
         },
       };
+      console.log("checking payload");
+      console.log(outgoingPayload);
+      const upvoter = userManager.getUser(payload.roomId, payload.userId);
+      upvoter?.conn.sendUTF(JSON.stringify(outgoingPayload));
       userManager.broadcast(payload.roomId, payload.userId, outgoingPayload);
     }
   }
